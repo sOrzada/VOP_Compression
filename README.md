@@ -1,6 +1,7 @@
 # VOP_Compression
 
 Speed improved algorithms for SAR compression for a paper in preparation.
+Needs Matlab 2023a or newer.
 
 "Compression" contains a speed improved SAR compression algorithm that uses the CC[1] and CO[2] criteria in the iterative algorithm proposed by Orzada et al.[3]
 
