@@ -70,6 +70,7 @@ end
 
 if use_Sglobal==1 %If the user wants to use the actual Sglobal, calculate it
     Sglobal=sum(matrices,3);
+    Sglobal=format_sq2tri(Sglobal);
 elseif use_Sglobal==2 %If user wants a diagonal matrix, calculate it.
     Sglobal=format_sq2tri(diag(ones(y,1)));
 elseif ismatrix(Sglobal)
