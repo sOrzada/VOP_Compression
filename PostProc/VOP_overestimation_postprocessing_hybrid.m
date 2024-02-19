@@ -286,7 +286,7 @@ VOP=reformat_tri(V_sub,y); %place all matrices in VOP variable
 Sglobal=reformat_tri(Sglobal,y);
 Sglobal_new=reformat_tri(Sglobal_new,y);
 
-save(['VOP_Lee_SOR_' name_VOP '_' num2str(eps_G) '.mat'],'VOP','Sglobal','Sglobal_new','elapsed_time','eps_G','max_Value_S') %save VOPs in file with a name that tells what was compressed and how.
+save(['VOP_PP_SOR_' name_VOP '_' num2str(eps_G) '.mat'],'VOP','Sglobal','Sglobal_new','elapsed_time','eps_G','max_Value_S') %save VOPs in file with a name that tells what was compressed and how.
 end
 
 function out=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
