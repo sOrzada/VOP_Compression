@@ -10,7 +10,7 @@ Orzada S, Fiedler TM, Quick HH, Ladd ME. Post-processing algorithms for specific
 
 Gras V, Boulant N, Luong M, Morel L, Le Touz N, Adam JP, Joly JC. A mathematical analysis of clustering-free local SAR compression algorithms for MRI safety in parallel transmission. IEEE Trans Med Imaging 2023;PP.
 
-RunPostproc.m is an example on how to call the Post Processing Algorithm.
+RunPostprocMulti.m is an example on how to call the Post Processing Algorithm.
 
 VOP_overestimation_postprocessing_hybrid.m is the actual post processing algorithm.
 
