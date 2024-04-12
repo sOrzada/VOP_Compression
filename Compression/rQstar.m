@@ -1,14 +1,17 @@
 function [R, X] = rQstar(Q, Qvop, compression, X)
-% This code was written by Vincent Gras.
+% This code was originally written by Vincent Gras.
+%
+% Changes were introduced by Stephan Orzada:
+% Reduced the number of unkowns by holding the phase of one channel
+% constant. Reduced the tolerances for the optimizer and increased the
+% number of function evaluations and iterations. Reduced the number of
+% operations in Objective Function and Constraint Function. 
 %
 % Gras V, Boulant N, Luong M, Morel L, Le Touz N, Adam JP, Joly JC. 
 % A mathematical analysis of clustering-free local SAR compression algorithms for MRI safety in parallel transmission. 
 % IEEE transactions on medical imaging 2023;PP.
 %
-% Downloaded and slightly modified from:
-% https://github.com/VincentGras/VOPcompressionCO
 %
-% Modification by Stephan Orzada: disable output to command window.
 %
 % maximizes xHQx subject to xHQ*x <= 1 
 % Q           : SAR matrices
@@ -57,19 +60,28 @@ else
             eigD = real(eigD);
             [~, k] = max(eigD);
             X0 = real(eigV(:,k));
+
         end
+        %IN the following lines we set the phase of the last channel to 0.
+        Xt=X0(1:Nc/2,:)+1i*X0(Nc/2+1:Nc,:);
+        Xt=Xt*exp(-1i*angle(Xt(end)));
+        X0(1:Nc/2)=real(Xt);
+        X0(Nc/2+1:Nc)=imag(Xt);
 
         X0 = sqrt( 1.0 / (SAR(Qvop, X0) + eps)) * X0;
+        opt = optimoptions('fmincon',...
+            'Algorithm', 'sqp', 'MaxIter', 2500, "MaxFunctionEvaluations",1500*Nc, ...
+            'Display', 'off', 'SpecifyObjectiveGradient', true, 'SpecifyConstraintGradient', true, 'TolFun',1e-6, 'TolX',1e-6,...
+            'StepTolerance',1e-12, 'ConstraintTolerance',1e-12, 'OptimalityTolerance', 1e-9);
 
-        opt = optimset('Algorithm', 'sqp', 'MaxIter', 1000, ...
-            'Display', 'off', 'GradObj', 'on', 'GradConstr', 'on');
-
+        
         if (compression)
             opt.OutputFcn = @stopCriterion;
         end
 
-        X(:,i) = fmincon(@(x) objfun(Qi,x), X0, [], [], [], [], [], [], @(x) constrfun(Qvop, x), opt);
-        
+        [X(:,i),~,~] = fmincon(@(x) objfun(Qi,x), X0, [], [], [], [], [], [], @(x) constrfun(Qvop, x), opt);
+
+
         R(i) = SAR(Qi,X(:,i))./SAR(Qvop,X(:,i));
         
         if (mod(i,1)== 0)
@@ -86,15 +98,19 @@ val = max(val, [], 'all');
 val = max(val, 0);
 
 function [C, G] = objfun(Q, V)
-C = -V' * Q * V;
-G = -2 * Q * V;
+V(end)=0; %Imaginary part of last channel can be kept 0.
+temp=Q*V; %This can be used for Gradient AND Objective
+C=-V'*temp;
+G=-2*temp;
+G(end)=0; %Gradient due to change in imaginary part of last channel has to be kept 0, so that the optimizer ignores this part.
 
 function [C,Ceq,G,Geq] = constrfun(Q,V)
-
 Ceq = [];
-C = reshape(pagemtimes(V, 'transpose', pagemtimes(Q, V), 'none'), size(Q, 3), 1) - 1;
+temp=pagemtimes(Q, V); %This can be used for Gradient and Constraint!
+G=2*reshape(temp, numel(V), size(Q, 3));
+C = reshape(pagemtimes(V, 'transpose', temp, 'none'), size(Q, 3), 1) - 1;
 Geq = [];
-G = 2 * reshape(pagemtimes(Q, V), numel(V), size(Q, 3));
+G(end,:)=0;
 
 function H = HessianFcn(Q, Qvop, V, lambda)
 
