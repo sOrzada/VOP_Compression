@@ -14,16 +14,33 @@
 filename_in='V_full.mat'; %Filename of matrices in square format.
 %filename_in='V_full_tri.mat'; %Filename of matrices in triangular format.
 
-name_save = 'Example_8ch';
+start_Overestimation = 40;   % Overestimation for first iteration in (%) of SAR_wc
+divider_Step = (0.5)^(1/3);  % After each iteration, the overstimation is multiplied with this factor
+
+% Example for options:
+options=[];
+options.name_save='Example_8ch';
+options.max_number_VOPs=160;
+options.max_iter=4;
+% options.continueFile='VOP_SOR_Example_8ch_0.2.mat';
+
+% % The following are standard values, to which the function reverts, if no
+% % other values are provided:
+
+% options.useGPU=false;
+% options.block_size_max=10000;
+% options.block_size_2=50000;
+% options.N_vop_switch=30;
+% options.numMat4Pageeig=30000;
+% options.numMat4GPU=100000;
+% options.OverestimationMatrixType='Diagonal';
+% options.OverestimationMatrix=[];
 
 
-start_Overestimation = 40;   % Overestimation for first iteration in (%)
-divider_Step = (0.5)^(1/2);  % After each iteration, the overstimation is multiplied with this factor
-max_number_VOPs =60;         % Maximum number of VOPs before program stops. The algorithm will change the step to target this exact number in the last iteration.
-max_iter = 8;                % Maximum number of iterations of the algorithm before it stops
+
 
 %%%% Program %%%%
 
 start_Overestimation = start_Overestimation /100;
 
-VOP_compression_iterative_Hybrid_double(filename_in,start_Overestimation,divider_Step,[],name_save,2,max_number_VOPs,max_iter)
+VOP_compression_iterative_Hybrid_tri(filename_in,start_Overestimation,divider_Step,options)
