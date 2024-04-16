@@ -1,4 +1,4 @@
-function [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(filename_in,VOP_start,Sglobal,name_VOP)
+function [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(filename_in,VOP_start,Sglobal,options)
 % This code was written by Stephan Orzada, German Cancer Research Center (DKFZ).
 % In 2024; email: stephan.orzada@dkfz.de
 % This code reduces overestimation for a given set of VOPs.
@@ -6,13 +6,27 @@ function [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(file
 % Matlab R2023a or later recommended.
 %
 % 'filename_in' points to a file containing the full set of SAR-matrices
-% (named 'matrices' and is [Nchannel,Nchannel,Nmatrices])
+% (named 'matrices' and is [Nchannel,Nchannel,Nmatrices] or triangular)
 % 'VOP_start' are the VOPs from an earlier compression (Using Lee's or
 % Orzada's compression algorithms). It is assumed here that these contain
 % overestimations.
 % 'Sglobal' is the orignal overestimation matrix used in compression of the
 % VOPs
-% 'name_VOP' is a string containing a name for the save-file
+% 'options' is a struct.
+%   'options.name_VOP'      String with name for result file.
+%   'options.use_GPU'       logical. default: 'false'
+%   'options.N_block'       Number of matrices checked in parallel with CO
+%                           criterion. Default: 400.
+%   'options.numMat4GPU'    Number of matrices send to GPU in parallel.
+%                           Default: 1e5. Use more with large GPU RAM.
+%   'options.numMat4Pageeig' Number of matrices sent to pageeig in parallel.
+%                            Default: 10,000.
+%   'options.sort_order'    'ascending' (default) or 'descending'.
+%   'options.overestimationReduction'  How much of the original
+%                                      overestimation matrix is taken away
+%                                      from VOPs. Default: 1. (meaning 100%)
+%   Form ore hidden options see code.
+%   
 %
 % When using a GPU, it is recommend to use matrices in single precision.
 % 
@@ -28,16 +42,86 @@ function [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(file
 
 tic %Start timer for total Elapsed time.
 %constants for internal purpose:
-R=1; % (0 to 1) how much of the original overestimation do we subtract from the VOPs? (Experimental. Better leave at 1)
-exponent_cwv=1; %can change weighting of coefficients for adding overestimation. (Experimental Better leave at 1)
-use_global_opt=false; %Use global optimization. Very slow. Only minimal enhancement if any.
-use_parallel=false; %Not sure yet whether this makes it any faster. (Might be system dependent)
+
+if nargin<4
+    options=[];
+    warning('No options provided. Using default values.')
+end
+
+try
+    name_VOP=options.name_save;
+catch
+    [~,name,~]=fileparts(filename_in);
+    name_VOP=name;
+end
+
+try
+    R=options.overestimationReduction;
+catch
+    R=1; % (0 to 1) how much of the original overestimation do we subtract from the VOPs? (Experimental. Better leave at 1)
+end
+
+try
+    exponent_cwv=options.exponent_cwv;
+catch
+    exponent_cwv=1; %can change weighting of coefficients for adding overestimation. (Experimental Better leave at 1)
+end
+
+try
+    use_global_opt=options.use_global_opt;
+catch
+    use_global_opt=false; %Use global optimization. Very slow. Only minimal enhancement if any.
+end
+
+try
+    use_parallel=options.use_parallel;
+catch
+    use_parallel=false; %Not sure yet whether this makes it any faster. (Might be system dependent)
+end
+
+try
+    use_GPU=options.use_GPU;
+catch
+    use_GPU=false; %If you have a CUDA GPU which can fit your matrices in its memory, try doing the cholesky factorization on the GPU. I did it on a GV100 with 32GB and it was incredibly fast.
+end
+
+try
+    N_block=options.N_block;
+catch
+    N_block=400; %Number of Matrices that are checked in parallel with CO criterion.
+end
+
+try
+    numMat4GPU=options.numMat4GPU;
+catch
+    numMat4GPU=100000; %Number of matrices that are transferred to GPU as a Batch
+end
+
+try
+    numMat4Pageeig=options.numMat4Pageeig;
+catch
+    numMat4Pageeig=10000; %Number of matrices for pageeig. A block of matrices is handed to pageeig to reduce memory use.
+end
+
+try
+    sort_order=options.sort_order;
+    if not(strcmp(sort_order,'ascend')) && not(strcmp(sort_order,'descend'))
+        error(['Unkown sorting order: ' sort_order])
+    end
+catch
+    sort_order='ascend'; %Order in which matrices are sorted. Use 'ascend' or 'descend'. 'ascend' seems to provide better results.
+end
+
+if use_GPU
+    try
+        gpuDevice; %Check if usable GPU is present
+    catch
+        use_GPU=false;
+        warning('No useable GPU present. Reverting to pageeig on CPU!')
+    end
+end
+
 use_outputfun=false; %Stops optimization when PSD. Not a good idea, since fewer matrices are dropped in cholesky step.
-use_GPU=false; %If you have a CUDA GPU which can fit your matrices in its memory, try doing the cholesky factorization on the GPU. I did it on a GV100 with 32GB and it was incredibly fast.
-N_block=400; %Number of Matrices that are checked in parallel with CO criterion.
-numMat4GPU=2000000; %Number of matrices that are transferred to GPU as a Batch
-numMat4Pageeig=10000; %Number of matrices for pageeig. A block of matrices is handed to pageeig to reduce memory use.
-sort_order='ascend'; %Order in which matrices are sorted. Use 'ascend' or 'descend'. 'ascend' seems to provide better results.
 
 if isMATLABReleaseOlderThan("R2023a") %If you use an older Matlab version, chol is used instead of pageeig.
     use_pageeig=false;
@@ -87,7 +171,7 @@ parfor a=1:N %Using parfor is faster than using for in this case. If the user ca
     eigenvalues_max(a)=max(real(eig_val_temp)); %Calculate maximum of real part.
 end
 
-disp('Sorting Eigenvalues...')
+disp(['Sorting Eigenvalues in ' sort_order 'ing order...'])
 [B,I_eigen]=sort(eigenvalues_max,sort_order); %Sort maximum Eigenvalues. I_eigen contains the indexes.
 %[~,I_eigen_resort]=sort(I_eigen,'ascend'); 
 
@@ -310,7 +394,7 @@ VOP=reformat_tri(V_sub,y); %Rename and reformat for output.
 Sglobal=reformat_tri(Sglobal,y);
 Sglobal_new=reformat_tri(Sglobal_new,y);
 
-save([name_VOP '_' num2str(eps_G) '.mat'],'VOP','Sglobal','Sglobal_new','elapsed_time','eps_G','max_Value_S') %save VOPs in file with a name that tells what was compressed and how.
+save(['PP_' name_VOP '_' num2str(eps_G) '.mat'],'VOP','Sglobal','Sglobal_new','elapsed_time','eps_G','max_Value_S') %save VOPs in file with a name that tells what was compressed and how.
 end
 
 function out=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon

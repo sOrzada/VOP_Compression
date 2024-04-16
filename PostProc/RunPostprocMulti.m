@@ -2,6 +2,17 @@
 % it is possible to load multiple files for postprocessing, but these must
 % be from the same set of SAR matrices (same model).
 
+% Example for options for post processing algorithm:
+options=[];
+options.use_GPU=false;
+options.N_block=400;
+options.numMat4GPU=100000;
+options.numMat4Pageeig=10000;
+options.sort_order='ascend';
+% options.name is set in the loop below.
+% There are more options. Please refer to the function for more
+% information.
+
 [file, path]=uigetfile('.mat','Select SAR matrices','MultiSelect','off');
 
 filename_in=[path '/' file];
@@ -25,8 +36,8 @@ for a=1:num_files
     end
     [~,name,~]=fileparts(filename);
     Nch=size(Sglobal);
-    name_VOP=['PP_' name];
+    options.name_save=name;
     VOP_start=VOP;
 
-    [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(filename_in,VOP_start,Sglobal,name_VOP);
+    [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(filename_in,VOP_start,Sglobal,options);
 end
