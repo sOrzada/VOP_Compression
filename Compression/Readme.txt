@@ -1,6 +1,7 @@
 Hybrid SAR matrix compression algorithm by Stephan Orzada from the German Cancer Research Center (DKFZ).
 
-This is code for a paper under review.
+If you use this code, please cite: 
+Stephan Orzada, Thomas M. Fiedler, Mark E. Ladd. "Hybrid algorithms for SAR matrix compression and the impact of post-processing on SAR calculation complexity", Magn Reson Med 2024, https://doi.org/10.1002/mrm.30235
 
 The method is a combination of the CC criterion and CO criterion.
 When you read this, the paper describing this is not published, yet. In this case, please cite this as a combination of the methods in these two papers:
