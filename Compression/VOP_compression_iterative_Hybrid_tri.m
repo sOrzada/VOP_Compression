@@ -34,15 +34,10 @@ function VOP_compression_iterative_Hybrid_tri(filename_in,eps_G,R,options)
 % This is a novel Hybrid approach with Lee's and Gras' criteria intermixed.
 % Uses the iterative approach by Orzada et al., too.
 %
-% Paper is in preparation. Until then please cite as a mixture of the methods from the following two papers:
-%
-% Orzada S, Fiedler TM, Quick HH, Ladd ME. 
-% Local SAR compression algorithm with improved compression, speed, and flexibility. 
-% Magn Reson Med 2021;86(1):561-568.
-%
-% Gras V, Boulant N, Luong M, Morel L, Le Touz N, Adam JP, Joly JC. 
-% A mathematical analysis of clustering-free local SAR compression algorithms for MRI safety in parallel transmission. 
-% IEEE transactions on medical imaging 2023;PP.
+% If you use this code, please cite: 
+% Stephan Orzada, Thomas M. Fiedler, Mark E. Ladd. 
+% "Hybrid algorithms for SAR matrix compression and the impact of post-processing on SAR calculation complexity", 
+% Magn Reson Med 2024, https://doi.org/10.1002/mrm.30235
 %
 % filename_in: Points to a .mat file containting a variable "matrices" SAR matrices (Q-matrices); either (N_channel, N_channel, N_matrices) or lower triangular matrices (N_channel^2/2+N_channel/2, N_matrices).
 % eps_G: Starting value for Overestimation, relative to worst case local SAR. (Note: The MINIMUM value of the overestimaton term is eps_G*SAR_wc)
