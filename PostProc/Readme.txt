@@ -1,6 +1,7 @@
 New post processing algorithm for Virtual Observation Points (VOPs) written by Stephan Orzada at the German Cancer Research Center (DKFZ).
 
-This is code for a paper under review.
+If you use this code, please cite: 
+Stephan Orzada, Thomas M. Fiedler, Mark E. Ladd. "Hybrid algorithms for SAR matrix compression and the impact of post-processing on SAR calculation complexity", Magn Reson Med 2024, https://doi.org/10.1002/mrm.30235
 
 This code combines the CC and the CO criteria for greatly enhanced speed.
 
