@@ -2,6 +2,12 @@ function [VOP,Sglobal_new]=VOP_overestimation_postprocessing_GPU_hybrid_tri(file
 % This code was written by Stephan Orzada, German Cancer Research Center (DKFZ).
 % In 2024; email: stephan.orzada@dkfz.de
 % This code reduces overestimation for a given set of VOPs.
+%
+% If you use this code, please cite: 
+% Stephan Orzada, Thomas M. Fiedler, Mark E. Ladd. 
+% "Hybrid algorithms for SAR matrix compression and the impact of post-processing on SAR calculation complexity", 
+% Magn Reson Med 2024, https://doi.org/10.1002/mrm.30235
+%
 % Matlab R2020b or later necessary.
 % Matlab R2023a or later recommended.
 %
