@@ -228,9 +228,9 @@ while N>0 %Evaluate all matrices (voxels).
        
         disp('Calculating coefficients for first drop.')
         if use_outputfun==true
-            options = optimoptions('fmincon','UseParallel',use_parallel,'OutputFcn',@outfun,'Algorithm','sqp','display','off'); %Turn of display. Otherwise notifications will be overwhelming
+            options = optimoptions('fmincon','UseParallel',use_parallel,'OutputFcn',@outfun,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true); %Turn of display. Otherwise notifications will be overwhelming
         else
-            options = optimoptions('fmincon','UseParallel',use_parallel,'Algorithm','sqp','display','off'); %Turn of display. Otherwise notifications will be overwhelming
+            options = optimoptions('fmincon','UseParallel',use_parallel,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true); %Turn of display. Otherwise notifications will be overwhelming
         end
         Sv_current_double=double(mean_matrix);
         %Sv_current_double=double(Sv_current);
@@ -279,7 +279,7 @@ while N>0 %Evaluate all matrices (voxels).
         V_sub_double=double(V_sub_pure); %Here we use the sub volume WITHOUT overestimation, so that we get a result with minimum total overstimation
         Sv_current_double=double(Sv_current);
         if use_global_opt==0 %fmincon with one start value
-            options = optimoptions('fmincon','UseParallel',use_parallel,'Algorithm','sqp','display','off');
+            options = optimoptions('fmincon','UseParallel',use_parallel,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true);
             %options.StepTolerance=1e-3; %SOR 23.02.2024
             %options
             [c_wv_out,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
@@ -403,11 +403,12 @@ Sglobal_new=reformat_tri(Sglobal_new,y);
 save(['PP_' name_VOP '_' num2str(eps_G) '.mat'],'VOP','Sglobal','Sglobal_new','elapsed_time','eps_G','max_Value_S') %save VOPs in file with a name that tells what was compressed and how.
 end
 
-function out=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
+function [C,G]=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
 %This is the function for optimization by fmincon. This uses only lower
 %triangles to increase speed and reduce memory requirements
-eig_values=(eig(reformat_tri(sum(B.*c_wvb',2)-Bi,ch))); %calculate eigenvalues
-out=-min(eig_values); %negativ of minimum eigenvalue (fmincon minimizes, but we want to maximize the minimum eigenvalue).
+[V,eig_values]=(eig(reformat_tri(Bi-sum(B.*c_wvb',2),ch),'vector')); %calculate eigenvalues
+[C,I]=max(eig_values); %We want to minimize the maximum eigenvalue. Ideally, all Eigenvalues are negative, so that Bi is dominated.
+G=-real(pagemtimes(V(:,I),'ctranspose',pagemtimes(reformat_tri(B,ch),V(:,I)),'none'));
 end
 
 function stop = outfun(~,optimValues,~) %Stop when you see it is dominated. Should not do this, since the number of VOPs dropped due to cholesky shrinks.
