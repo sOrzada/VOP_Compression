@@ -125,7 +125,7 @@ end
 try
     N_vop_switch=options.N_vop_switch;
 catch
-    N_vop_switch=30; %Number of VOPs at which we switch between Lee's criterion and Gras' criterion.
+    N_vop_switch=100; %Number of VOPs at which we switch between Lee's criterion and Gras' criterion.
 end
 
 try
@@ -261,7 +261,7 @@ disp(['Starting: ' num2str(eps_G) ' Maximum Overestimation: ' num2str(overestima
 too_many_vops=false; %to check whether a run has finished correctly or was broken due to too many vops.
 ran_out_counter=0; %Counter for matrices which are included as VOPs without definitive descision.
 
-options = optimoptions('fmincon','UseParallel',false,'Algorithm','sqp','display','off');
+options = optimoptions('fmincon','UseParallel',false,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true,'CheckGradients',false);
 options.MaxFunctionEvaluations=MaxFunEval;
 
 while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
@@ -485,10 +485,12 @@ end
 
 end %End function
 
-function out=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
+function [C,G]=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
 %This is the function for optimization by fmincon. This uses only lower
 %triangles to increase speed and reduce memory requirements
-eig_values=(eig(reformat_tri(sum(B.*c_wvb',2)-Bi,ch))); %calculate eigenvalues
-out=-min(eig_values); %negativ of minimum eigenvalue (fmincon minimizes, but we want to maximize the minimum eigenvalue).
+[V,eig_values]=(eig(reformat_tri(Bi-sum(B.*c_wvb',2),ch),'vector')); %calculate eigenvalues
+[C,I]=max(eig_values); %We want to minimize the maximum eigenvalue. Ideally, all Eigenvalues are negative, so that Bi is dominated.
+G=-real(pagemtimes(V(:,I),'ctranspose',pagemtimes(reformat_tri(B,ch),V(:,I)),'none'));
+
 end
 
