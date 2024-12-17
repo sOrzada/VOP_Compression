@@ -125,7 +125,7 @@ end
 try
     N_vop_switch=options.N_vop_switch;
 catch
-    N_vop_switch=100; %Number of VOPs at which we switch between Lee's criterion and Gras' criterion.
+    N_vop_switch=50; %Number of VOPs at which we switch between Lee's criterion and Gras' criterion.
 end
 
 try
