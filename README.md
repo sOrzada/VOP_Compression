@@ -12,3 +12,8 @@ Needs Matlab 2023a or newer.
 "PostProc" contains a speed improved Virtual Observation Point (VOP) postprocessing algorithm that uses both the CC[1] and CO[2] critria within the post processing algorithm proposed by Orzada et al.[4]
 
 If you have any questions or suggestions, please contact stephan.orzada@dkfz.de
+
+1.	Lee J, Gebhardt M, Wald LL, Adalsteinsson E. "Local SAR in parallel transmission pulse design". Magn Reson Med 2012;67(6):1566-1578.
+2.	Gras V, Boulant N, Luong M, Morel L, Le Touz N, Adam JP, Joly JC. "A mathematical analysis of clustering-free local SAR compression algorithms for MRI safety in parallel transmission". IEEE Trans Med Imaging 2023;PP.
+3.	Orzada S, Fiedler TM, Quick HH, Ladd ME. "Local SAR compression algorithm with improved compression, speed, and flexibility". Magn Reson Med 2021;86(1):561-568.
+4.	Orzada S, Fiedler TM, Quick HH, Ladd ME. "Post-processing algorithms for specific absorption rate compression". Magn Reson Med 2021;86(5):2853-2861.
