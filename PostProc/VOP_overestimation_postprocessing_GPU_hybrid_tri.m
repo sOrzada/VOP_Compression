@@ -234,7 +234,8 @@ while N>0 %Evaluate all matrices (voxels).
         end
         Sv_current_double=double(mean_matrix);
         %Sv_current_double=double(Sv_current);
-        [c_wv_out,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
+        Bsq=reformat_tri(V_sub_double,y); %We reformat this here, so we don't have to do this inside the optimization over and over again.
+        [c_wv_out,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Bsq,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
         c_wv=reshape(c_wv_out,[1 num_vops]); %reshape c_wv for easier multiplication with matrices.
         
         %Here, we do not care whether this matrix is upperbounded. We just
@@ -282,7 +283,8 @@ while N>0 %Evaluate all matrices (voxels).
             options = optimoptions('fmincon','UseParallel',use_parallel,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true);
             %options.StepTolerance=1e-3; %SOR 23.02.2024
             %options
-            [c_wv_out,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
+            Bsq=reformat_tri(V_sub_double,y); %We reformat this here, so we don't have to do this inside the optimization over and over again.
+            [c_wv_out,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Bsq,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
             c_wv=reshape(c_wv_out,[1 num_vops]); %reshape vor easier multiplication with matrices.
         end
         
@@ -403,12 +405,12 @@ Sglobal_new=reformat_tri(Sglobal_new,y);
 save(['PP_' name_VOP '_' num2str(eps_G) '.mat'],'VOP','Sglobal','Sglobal_new','elapsed_time','eps_G','max_Value_S') %save VOPs in file with a name that tells what was compressed and how.
 end
 
-function [C,G]=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
+function [C,G]=optimize_me_tri(B,Bsq,Bi,c_wvb,ch) %This is the function for optimization by fmincon
 %This is the function for optimization by fmincon. This uses only lower
 %triangles to increase speed and reduce memory requirements
 [V,eig_values]=(eig(reformat_tri(Bi-sum(B.*c_wvb',2),ch),'vector')); %calculate eigenvalues
 [C,I]=max(eig_values); %We want to minimize the maximum eigenvalue. Ideally, all Eigenvalues are negative, so that Bi is dominated.
-G=-real(pagemtimes(V(:,I),'ctranspose',pagemtimes(reformat_tri(B,ch),V(:,I)),'none'));
+G=-real(pagemtimes(V(:,I),'ctranspose',pagemtimes(Bsq,V(:,I)),'none'));
 end
 
 function stop = outfun(~,optimValues,~) %Stop when you see it is dominated. Should not do this, since the number of VOPs dropped due to cholesky shrinks.

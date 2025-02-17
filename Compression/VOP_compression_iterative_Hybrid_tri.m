@@ -309,8 +309,8 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
             ub=ones(num_vops,1); %lower bound for c_wv
             V_sub_double=double(V_sub); 
             Sv_current_double=double(Sv_current);
-
-            [c_wv_out,feval,exitflag,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
+            Bsq=reformat_tri(V_sub_double,y); %We reformat this here, so we only have to do it once and not over and over again within the optimization.
+            [c_wv_out,feval,exitflag,~]=fmincon(@(c)optimize_me_tri(V_sub_double,Bsq,Sv_current_double,c,y),c_wv_0,[],[],A,b,lb,ub,[],options);
 
             c_wv=reshape(c_wv_out,[1 num_vops]); %reshape c_wv for easier multiplication with matrices.
 
@@ -485,12 +485,12 @@ end
 
 end %End function
 
-function [C,G]=optimize_me_tri(B,Bi,c_wvb,ch) %This is the function for optimization by fmincon
+function [C,G]=optimize_me_tri(B,Bsq,Bi,c_wvb,ch) %This is the function for optimization by fmincon
 %This is the function for optimization by fmincon. This uses only lower
 %triangles to increase speed and reduce memory requirements
 [V,eig_values]=(eig(reformat_tri(Bi-sum(B.*c_wvb',2),ch),'vector')); %calculate eigenvalues
 [C,I]=max(eig_values); %We want to minimize the maximum eigenvalue. Ideally, all Eigenvalues are negative, so that Bi is dominated.
-G=-real(pagemtimes(V(:,I),'ctranspose',pagemtimes(reformat_tri(B,ch),V(:,I)),'none'));
+G=-real(pagemtimes(V(:,I),'ctranspose',pagemtimes(Bsq,V(:,I)),'none'));
 
 end
 
