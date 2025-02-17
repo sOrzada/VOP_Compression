@@ -193,15 +193,6 @@ catch
 end
 
 
-if use_Sglobal==1 %If the user wants to use the actual Sglobal, calculate it
-    Sglobal=sum(matrices,2);
-    Sglobal=format_sq2tri(Sglobal);
-elseif use_Sglobal==2 %If user wants a diagonal matrix, calculate it.
-    Sglobal=format_sq2tri(diag(ones(y,1)));
-elseif ismatrix(Sglobal)
-    Sglobal=(Sglobal+Sglobal')/2; %make sure Sglobal is symmetric. (faster eig() and only real eigenvalues).
-    Sglobal=format_sq2tri(Sglobal);
-end
 
 eigenvalues_max=zeros(N,1);
 X=zeros(y,N); %Starting Vector for Vincent's optimization
@@ -222,6 +213,16 @@ parfor a=1:N %Using parfor is faster than using for in this case. If the user ca
     X(:,a)=V(:,Ieig);
 end
 
+if use_Sglobal==1 %If the user wants to use the actual Sglobal, calculate it
+    Sglobal=sum(matrices,2);
+elseif use_Sglobal==2 %If user wants a diagonal matrix, calculate it.
+    Sglobal=format_sq2tri(diag(ones(y,1)));
+elseif ismatrix(Sglobal)
+    Sglobal=(Sglobal+Sglobal')/2; %make sure Sglobal is symmetric. (faster eig() and only real eigenvalues).
+    Sglobal=format_sq2tri(Sglobal);
+end
+
+
 mean_matrix=mean(matrices,2);
 
 disp('Sorting Eigenvalues...')
@@ -230,7 +231,7 @@ I_eigen_save=I_eigen; %save I_eigen for later runs.
 N_start=N; %Save number of matrices.
 
 
-Sglobal=Sglobal/min(real(eig(reformat_tri(Sglobal,y))))*B(1); %Normalize Sglobal. We use the minimum eigenvalue here, because it determines the minimum value the overestimation term can assume, and this is crucial for the number of VOPs.
+Sglobal=Sglobal/max(real(eig(reformat_tri(Sglobal,y))))*B(1); %Normalize Sglobal. We use the minimum eigenvalue here, because it determines the minimum value the overestimation term can assume, and this is crucial for the number of VOPs.
 SAR_wc=B(1);
 Sglobal=Sglobal*eps_G; %multiply with eps_G for overestimation control.
 clear B %not needed anymore. We only need I, since it contains the order in which we look at the matrices Sv.

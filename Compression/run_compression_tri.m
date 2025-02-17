@@ -33,7 +33,7 @@ options.max_iter=4;
 % options.N_vop_switch=100;
 % options.numMat4Pageeig=30000;
 % options.numMat4GPU=100000;
-% options.OverestimationMatrixType='Diagonal';
+% options.OverestimationMatrixType='Global';
 % options.OverestimationMatrix=[];
 
 
