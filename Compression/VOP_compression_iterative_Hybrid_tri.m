@@ -394,7 +394,7 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
                     isPSD_complete=false(N_unchecked,1); %Allocate memory
                     
                     for a=1:numel(cpu_Steps)-1
-                        eigenv=pageeig(double(reformat_tri(P_pre2-double(matrices(:,I_eigen_unchecked(cpu_Steps(a):cpu_Steps(a+1)))),y)));
+                        eigenv=pageeig(double(reformat_tri(single(P_pre2)-(matrices(:,I_eigen_unchecked(cpu_Steps(a):cpu_Steps(a+1)))),y)));
                         min_eig=squeeze(min(eigenv));
                         isPSD=min_eig>=0;
                         isPSD_complete(cpu_Steps(a):cpu_Steps(a+1))=isPSD; %Save the result chunk in total result
@@ -413,7 +413,7 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
             else
                 block_size_current = block_size;
             end
-            [R, X_temp] = rQstar(reformat_tri(matrices(:,I_eigen(1:block_size_current))/SAR_wc,y), V_sub_square/SAR_wc, true, X(:,I_eigen(1:block_size_current)));
+            [R, X_temp] = rQstar(double(reformat_tri(matrices(:,I_eigen(1:block_size_current))/SAR_wc,y)), double(V_sub_square/SAR_wc), true, X(:,I_eigen(1:block_size_current)));
             X(:,I_eigen(1:block_size_current))=X_temp;
 
             if all(R<=1)
@@ -436,7 +436,7 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
             check2_Steps=[1:block_size_2:N N];
             delete_pos=false(N,1);
             for a=1:numel(check2_Steps)-1
-                [R, X_temp] = rQstar(reformat_tri(matrices(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))/SAR_wc,y), V_sub_square/SAR_wc, true, X(:,I_eigen(check2_Steps(a):check2_Steps(a+1))));
+                [R, X_temp] = rQstar(double(reformat_tri(matrices(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))/SAR_wc,y)), double(V_sub_square/SAR_wc), true, X(:,I_eigen(check2_Steps(a):check2_Steps(a+1))));
                 X(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))=X_temp;
                 delete_pos(check2_Steps(a):check2_Steps(a+1)) = R<=1;
             end

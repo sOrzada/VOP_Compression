@@ -14,14 +14,14 @@
 filename_in='V_full.mat'; %Filename of matrices in square format.
 %filename_in='V_full_tri.mat'; %Filename of matrices in triangular format.
 
-start_Overestimation = 40;   % Overestimation for first iteration in (%) of SAR_wc
+start_Overestimation = 10;   % Overestimation for first iteration in (%) of SAR_wc
 divider_Step = (0.5)^(1/3);  % After each iteration, the overstimation is multiplied with this factor
 
 % Example for options:
 options=[];
-options.name_save='Example_8ch';
+options.name_save='Example_double';
 options.max_number_VOPs=160;
-options.max_iter=4;
+options.max_iter=10;
 % options.continueFile='VOP_SOR_Example_8ch_0.2.mat';
 
 % % The following are standard values, to which the function reverts, if no
@@ -30,7 +30,7 @@ options.max_iter=4;
 % options.useGPU=false;
 % options.block_size_max=10000;
 % options.block_size_2=50000;
-% options.N_vop_switch=100;
+% options.N_vop_switch=40;
 % options.numMat4Pageeig=30000;
 % options.numMat4GPU=100000;
 % options.OverestimationMatrixType='Global';

@@ -6,9 +6,9 @@ function B_sq=reformat_tri(B_tri,N)
 % Written by Stephan Orzada at the German Cancer Research Center (DKFZ) 
 
 N_dim=size(B_tri,2);
-
+used_type = class(B_tri);
 if N_dim==1
-    B_sq=zeros(N,N,'double');
+    B_sq=zeros(N,N,used_type);
     B_sq(1,1)=B_tri(1);
     for y=2:N
         linepos=(y-1)*y/2+1;
@@ -18,7 +18,7 @@ if N_dim==1
     end
 else
     N_mats=size(B_tri,2);
-    B_sq=zeros(N,N,N_mats,'double');
+    B_sq=zeros(N,N,N_mats,used_type);
     B_sq(1,1,:)=B_tri(1,:);
     for y=2:N
         linepos=(y-1)*y/2+1;
