@@ -184,9 +184,9 @@ disp(['Sorting Eigenvalues in ' sort_order 'ing order...'])
 disp('Reordering matrices...')
 
 if strcmp(sort_order,'ascend')
-    max_eig=B(I_eigen(end));
+    max_eig=B(end);
 else
-    max_eig=B(I_eigen(1));
+    max_eig=B(1);
 end
 
 num_vops=size(VOP_start,2); %initialize num vops
