@@ -11,6 +11,8 @@ VOP_compression_iterative_Hybrid.m contains the actual compression algorithm. Th
 
 rQstar.m was written by Vincent Gras for above paper. It has been modified to suppress the output to the command window.
 
+rco_fw_gt.m is a new implementation (2026) which uses Frank-Wolfe to evaluate the CO criterion faster than rQstar.
+
 The other scripts are helper functions.
 
 If you encounter any problems or have any questions, do not hesitate to contact stephan.orzada@dkfz.de

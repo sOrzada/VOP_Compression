@@ -1,4 +1,4 @@
-function [R, X] = rQstar(Q, Qvop, compression, X)
+function [R, X] = rQstar_prep(Q, Qvop, compression, X)
 % This code was originally written by Vincent Gras.
 %
 % Changes were introduced by Stephan Orzada:
@@ -21,18 +21,28 @@ function [R, X] = rQstar(Q, Qvop, compression, X)
 %               optimization is stop as soon as xHQx exceeds 1
 % X           : initial guess for the optimization
 %               default is []
-                  
 
-if (nargin < 4)
-    X = [];
-end
+Nc = size(Qvop, 1);
+N = size(Q, 3);
+Nvop = size(Qvop,3);
+
+%if (nargin < 4)
+    X = zeros(Nc,N);
+    Qvop_cell=cell(Nvop,1);
+    for a = 1:Nvop
+        Qvop_cell{a}=Qvop(:,:,a);
+    end
+    parfor a=1:N
+        [~, X(:,a), ~] = solveCase2Fast(Q(:,:,a),Qvop_cell);
+    end
+%end
 
 if (nargin < 3)
     compression = false;
 end
 
-Nc = size(Qvop, 1);
-N = size(Q, 3);
+
+
 
 if (~isreal(Q) || ~isreal(Qvop))
     
@@ -62,6 +72,7 @@ else
             X0 = real(eigV(:,k));
 
         end
+
         %IN the following lines we set the phase of the last channel to 0.
         Xt=X0(1:Nc/2,:)+1i*X0(Nc/2+1:Nc,:);
         Xt=Xt*exp(-1i*angle(Xt(end)));

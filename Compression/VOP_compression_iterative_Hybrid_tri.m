@@ -4,6 +4,9 @@ function VOP_compression_iterative_Hybrid_tri(filename_in,eps_G,R,options)
 % 'R'           Reduction factor. After each iteration, overestimation is
 %               multiplied by this factor.
 % 'options'     Optional Struct with information for Algorithm:
+%   'options.algorithm'       Name of algorithm to check CO criterion
+%       'fmincon' for fmincon based as proposed by Gras et al. (Default)
+%       'FW' for Frank-Wolfe algorithm (much faster, experimental)
 %   'options.name_save'       Save name for results
 %   'options.max_number_VOPs' Algorithm will try to exactly provide this
 %                             number of VOPs.
@@ -73,6 +76,12 @@ use_chol=false; %Use Cholesky Factorization if not run on GPU. If 'false' use pa
 
 if nargin<4
     warning('No options provided by user! Reverting to default values!')
+end
+
+try
+    algorithm = options.algorithm;
+catch
+    algorithm = 'FW'; %Frank-Wolfe should be standard as it is faster and globally optimal.
 end
 
 try
@@ -165,6 +174,26 @@ else
     error(['Unkown Matrix Type provided by user: ' OverestimationMatrixType ])
 end
 
+% We need to make sure that the right type of parallel pool is used that
+% supports the algorithm.
+poolObj = gcp('nocreate');
+switch algorithm
+    case 'FW'
+        if isempty(poolObj)
+            poolObj=parpool('Threads');
+        elseif not(isa(poolObj,'parallel.ThreadPool'))
+            poolObj.delete
+            poolObj=parpool('Threads');
+        end
+    otherwise
+        if isempty(poolObj)
+            poolObj=parpool('Processes');
+        elseif not(isa(poolObj,'parallel.ProcessPool'))
+            poolObj.delete
+            poolObj=parpool('Processes');
+        end
+end
+
 
 tic %Start timer for total elapsed time.
 
@@ -195,7 +224,13 @@ end
 
 
 eigenvalues_max=zeros(N,1);
-X=zeros(y,N); %Starting Vector for Vincent's optimization
+if strcmp(algorithm,'FW')
+    % We can't allocate enough memory for the Y's for FW. at 500 VOPs for
+    % example, this would be equivalent to saving another set of matrices
+    % with 22 channels. We have to use cold start. :(
+else
+    X=zeros(y,N); %Starting Vector for Vincent's optimization
+end
 disp('Calculating all Eigenvalues...')
 
 parfor a=1:N %Using parfor is faster than using for in this case. If the user cannot use the parallelized form, "for" can be used instead. This is only a minor reduction in speed for large problems, since this part is only calculated ones.
@@ -210,7 +245,7 @@ parfor a=1:N %Using parfor is faster than using for in this case. If the user ca
     
     [eigmax,Ieig]=max(real(eig_val_temp)); %Calculate maximum of real part.
     eigenvalues_max(a)=eigmax;
-    X(:,a)=V(:,Ieig);
+    %X(:,a)=V(:,Ieig);
 end
 
 if use_Sglobal==1 %If the user wants to use the actual Sglobal, calculate it
@@ -262,7 +297,7 @@ disp(['Starting: ' num2str(eps_G) ' Maximum Overestimation: ' num2str(overestima
 too_many_vops=false; %to check whether a run has finished correctly or was broken due to too many vops.
 ran_out_counter=0; %Counter for matrices which are included as VOPs without definitive descision.
 
-options = optimoptions('fmincon','UseParallel',false,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true,'CheckGradients',false);
+options = optimoptions('fmincon','UseParallel',false,'Algorithm','sqp','display','off','SpecifyObjectiveGradient', true);
 options.MaxFunctionEvaluations=MaxFunEval;
 
 while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
@@ -413,8 +448,13 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
             else
                 block_size_current = block_size;
             end
-            [R, X_temp] = rQstar(double(reformat_tri(matrices(:,I_eigen(1:block_size_current))/SAR_wc,y)), double(V_sub_square/SAR_wc), true, X(:,I_eigen(1:block_size_current)));
-            X(:,I_eigen(1:block_size_current))=X_temp;
+
+            if strcmp(algorithm,'FW')
+                R = run_rco_fw(double(reformat_tri(matrices(:,I_eigen(1:block_size_current)),y)), double(V_sub_square));
+            else
+                [R, X_temp] = rQstar(double(reformat_tri(matrices(:,I_eigen(1:block_size_current))/SAR_wc,y)), double(V_sub_square/SAR_wc), true, X(:,I_eigen(1:block_size_current)));
+                X(:,I_eigen(1:block_size_current))=X_temp;
+            end
 
             if all(R<=1)
                 I_eigen(1:block_size_current)=[];
@@ -424,7 +464,7 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
                 drop_percent=sum(double(R<=1))/block_size;
                 block_size=floor(block_size_max*drop_percent)+1; %Adaptive blocksize reduces multiple checks of same matrices.
                 V_sub(:,num_vops+1)=matrices(:,I_eigen(1))+Sglobal;
-                disp([num2str(eps_G) ', Finished: ' num2str((N_start-N+a)/N_start*100) '% VOP: ' num2str(num_vops+1) '. ID: ' num2str(I_eigen(1)) ' Drop: ' num2str(drop_percent*100) '%'])
+                disp([num2str(eps_G) ', Finished: ' num2str((N_start-N+a)/N_start*100) '% VOP: ' num2str(num_vops+1) '. ID: ' num2str(I_eigen(1)) ' Drop: ' num2str(drop_percent*100) '%', ' Algorithm: ' algorithm])
                 VOPID = [VOPID I_eigen(1)]; %Since the matrix with the index I_eigen(1) was found to be a VOP, place its ID in VOPID
                 I_eigen(1)=[];
                 V_sub_square = reformat_tri(V_sub,y);
@@ -436,8 +476,12 @@ while (num_vops<max_num_VOPs) && (iteration_step<=max_iter)
             check2_Steps=[1:block_size_2:N N];
             delete_pos=false(N,1);
             for a=1:numel(check2_Steps)-1
-                [R, X_temp] = rQstar(double(reformat_tri(matrices(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))/SAR_wc,y)), double(V_sub_square/SAR_wc), true, X(:,I_eigen(check2_Steps(a):check2_Steps(a+1))));
-                X(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))=X_temp;
+                if strcmp(algorithm,'FW')
+                    R = run_rco_fw(double(reformat_tri(matrices(:,I_eigen(check2_Steps(a):check2_Steps(a+1))),y)), double(V_sub_square));
+                else
+                    [R, X_temp] = rQstar(double(reformat_tri(matrices(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))/SAR_wc,y)), double(V_sub_square/SAR_wc), true, X(:,I_eigen(check2_Steps(a):check2_Steps(a+1))));
+                    X(:,I_eigen(check2_Steps(a):check2_Steps(a+1)))=X_temp;
+                end
                 delete_pos(check2_Steps(a):check2_Steps(a+1)) = R<=1;
             end
             dropped_mats=sum(double(delete_pos));
