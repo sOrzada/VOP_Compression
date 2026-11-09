@@ -62,6 +62,12 @@ catch
 end
 
 try
+    algorithm = options.algorithm;
+catch
+    algorithm = 'FW';
+end
+
+try
     R=options.overestimationReduction;
 catch
     R=1; % (0 to 1) how much of the original overestimation do we subtract from the VOPs? (Experimental. Better leave at 1)
@@ -133,6 +139,26 @@ if isMATLABReleaseOlderThan("R2023a") %If you use an older Matlab version, chol 
     use_pageeig=false;
 else
     use_pageeig=true;
+end
+
+% We need to make sure that the right type of parallel pool is used that
+% supports the algorithm.
+poolObj = gcp('nocreate');
+switch algorithm
+    case 'FW'
+        if isempty(poolObj)
+            poolObj=parpool('Threads');
+        elseif not(isa(poolObj,'parallel.ThreadPool'))
+            poolObj.delete
+            poolObj=parpool('Threads');
+        end
+    otherwise
+        if isempty(poolObj)
+            poolObj=parpool('Processes');
+        elseif not(isa(poolObj,'parallel.ProcessPool'))
+            poolObj.delete
+            poolObj=parpool('Processes');
+        end
 end
 
 
@@ -248,8 +274,13 @@ while N>0 %Evaluate all matrices (voxels).
         if N<N_block
             N_block=N;
         end
-        [R, ~] = rQstar(reformat_tri(matrices(:,I_eigen(1:N_block)),y), reformat_tri(V_sub_double,y), true,[]);
+        if strcmp(algorithm, 'FW')
+            R = run_rco_fw(reformat_tri(matrices(:,I_eigen(1:N_block)),y), reformat_tri(V_sub_double,y));
+        else
+            [R, ~] = rQstar(reformat_tri(matrices(:,I_eigen(1:N_block)),y), reformat_tri(V_sub_double,y), true,[]);
+        end
         
+
         I_eigen(R<1)=[];
         N=numel(I_eigen);
         %X(R<1)=[];
@@ -327,7 +358,7 @@ while N>0 %Evaluate all matrices (voxels).
             end
         end
         eps_G=max_Value_S/max_eig;
-        disp([num2str(eps_G) ', Finished: ' num2str((N_start-N+1)/N_start*100) '%.'])
+        disp([num2str(eps_G) ', Finished: ' num2str((N_start-N+1)/N_start*100) '%. Algorithm: ' algorithm])
     end
     
     %Check for matrices that are dominated by the previous result. Saves a

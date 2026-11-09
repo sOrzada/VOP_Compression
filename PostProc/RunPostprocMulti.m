@@ -9,6 +9,7 @@ options.N_block=400;
 options.numMat4GPU=100000;
 options.numMat4Pageeig=10000;
 options.sort_order='ascend';
+options.algorithm = 'FW';
 % options.name is set in the loop below.
 % There are more options. Please refer to the function for more
 % information.
